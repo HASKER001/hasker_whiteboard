@@ -3,63 +3,234 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Whiteboard</title>
-    <link rel="stylesheet" href="style.css">
+    <title>Whiteboard Professional Edition</title>
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <style>
+        /* Базовые стили */
+        html, body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background: #0f0f13;
+            touch-action: none; /* Отключаем стандартные жесты браузера */
+        }
+
+        canvas {
+            background: #ffffff;
+            display: block;
+            cursor: crosshair;
+        }
+
+        /* Кнопка настроек AndroidIDE */
+        #settingsBtn {
+            position: fixed;
+            left: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 28px;
+            background: #1e1e26;
+            color: #7aa2f7;
+            padding: 18px;
+            border-radius: 15px;
+            border: 1px solid #323244;
+            cursor: pointer;
+            z-index: 1000;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.5);
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        #settingsBtn:active { scale: 0.85; background: #24283b; }
+
+        /* Боковая панель управления */
+        #settingsPanel {
+            position: fixed;
+            left: -320px;
+            top: 0;
+            width: 300px;
+            height: 100%;
+            background: #16161e;
+            color: #c0caf5;
+            padding: 30px 20px;
+            transition: left 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 1001;
+            border-right: 1px solid #292e42;
+            box-sizing: border-box;
+            overflow-y: auto;
+        }
+        #settingsPanel.open { left: 0; }
+
+        #settingsPanel h2 {
+            font-size: 20px;
+            margin-top: 0;
+            margin-bottom: 30px;
+            color: #7aa2f7;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            border-bottom: 1px solid #292e42;
+            padding-bottom: 10px;
+        }
+
+        /* Группы настроек */
+        .section { margin-bottom: 25px; }
+        .section label {
+            display: block;
+            margin-bottom: 12px;
+            font-size: 12px;
+            color: #565f89;
+            text-transform: uppercase;
+            font-weight: bold;
+        }
+
+        /* Стилизация элементов ввода */
+        input[type=range] {
+            width: 100%;
+            accent-color: #7aa2f7;
+            height: 6px;
+            background: #24283b;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+
+        select, input[type=text], input[type=password] {
+            width: 100%;
+            padding: 12px;
+            border-radius: 8px;
+            border: 1px solid #292e42;
+            background: #1a1b26;
+            color: #c0caf5;
+            font-size: 14px;
+            box-sizing: border-box;
+            outline: none;
+            transition: border 0.3s;
+        }
+        select:focus, input:focus { border-color: #7aa2f7; }
+
+        /* Кнопки */
+        .btn {
+            width: 100%;
+            padding: 14px;
+            border: none;
+            border-radius: 8px;
+            font-weight: bold;
+            font-size: 14px;
+            cursor: pointer;
+            transition: opacity 0.2s, transform 0.1s;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+        }
+        .btn:active { transform: scale(0.98); opacity: 0.8; }
+        .primary { background: #7aa2f7; color: #15161e; }
+        .secondary { background: #24283b; color: #c0caf5; border: 1px solid #292e42; }
+        .danger { background: #f7768e; color: #15161e; margin-top: 15px; }
+
+        /* Затемнение при открытом меню */
+        #overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.6);
+            display: none;
+            z-index: 999;
+            backdrop-filter: blur(2px);
+        }
+        #overlay.show { display: block; }
+
+        /* Модальные окна */
+        .custom-modal {
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 15, 21, 0.85);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+        }
+        .custom-modal.show { display: flex; }
+        .modal-content {
+            background: #16161e;
+            border: 1px solid #292e42;
+            padding: 30px;
+            border-radius: 16px;
+            width: 90%;
+            max-width: 340px;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.6);
+        }
+        .modal-content h3 { margin-top: 0; color: #7aa2f7; font-size: 18px; margin-bottom: 20px; }
+
+        /* Плеер YouTube виджеты */
+        #widget-container {
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            z-index: 5;
+        }
+    </style>
 </head>
 <body>
 
-<canvas id="board"></canvas>
+    <canvas id="board"></canvas>
 
-<div id="settingsBtn">⚙️</div>
+    <div id="widget-container"></div>
 
-<div id="settingsPanel">
-    <h2>Настройки</h2>
-    <div class="section">
-        <label>✏ Толщина карандаша</label>
-        <input type="range" id="brushSize" min="1" max="30" value="3">
-    </div>
-    <div class="section">
-        <label>🅰 Размер текста</label>
-        <input type="range" id="textSize" min="10" max="80" value="24">
-    </div>
-    <div class="section">
-        <label>🖼 Размер изображений</label>
-        <input type="range" id="imageScale" min="0.2" max="3" step="0.1" value="1">
-    </div>
-    <div class="section">
-        <label>📤 Загрузить изображение</label>
-        <input type="file" id="imageUpload" accept="image/*">
-    </div>
-    <hr>
-    <button id="clearAllBtn" class="danger">🧹 Очистить для всех</button>
-</div>
+    <div id="settingsBtn">≡</div>
 
-<div id="textModal" class="custom-modal">
-    <div class="modal-content">
-        <h3>Новый текст</h3>
-        <input type="text" id="modalTextInput" placeholder="Введите что-нибудь...">
-        <div class="modal-buttons">
-            <button id="textCancel">Отмена</button>
-            <button id="textConfirm" class="primary">Добавить</button>
+    <div id="overlay"></div>
+
+    <div id="settingsPanel">
+        <h2>AndroidIDE Board</h2>
+        
+        <div class="section">
+            <label>Размер кисти</label>
+            <input type="range" id="brushSize" min="1" max="50" value="3">
+        </div>
+
+        <div class="section">
+            <label>Качество загрузки</label>
+            <select id="uploadQuality">
+                <option value="0.3">Низкое (Быстро)</option>
+                <option value="0.6" selected>Среднее (Рекомендуется)</option>
+                <option value="0.9">Высокое (Медленно)</option>
+                <option value="1.0">Оригинал</option>
+            </select>
+        </div>
+
+        <div class="section">
+            <label>Масштаб медиа</label>
+            <input type="range" id="mediaScale" min="0.1" max="3" step="0.1" value="0.5">
+        </div>
+
+        <div class="section">
+            <label>Контент</label>
+            <button class="btn primary" onclick="document.getElementById('mediaUpload').click()">Добавить фото/видео</button>
+            <input type="file" id="mediaUpload" accept="image/*,video/mp4" style="display:none">
+        </div>
+
+        <div class="section">
+            <button class="btn secondary" id="clearAllBtn">Очистить доску</button>
         </div>
     </div>
-</div>
 
-<div id="passwordModal" class="custom-modal">
-    <div class="modal-content">
-        <h3>Очистка доски</h3>
-        <p>Введите пароль администратора:</p>
-        <input type="password" id="modalPassInput">
-        <div class="modal-buttons">
-            <button id="passCancel">Отмена</button>
-            <button id="passConfirm" class="danger">Удалить всё</button>
+    <div id="textModal" class="custom-modal">
+        <div class="modal-content">
+            <h3>Введите текст</h3>
+            <input type="text" id="modalTextInput" placeholder="Напишите что-нибудь...">
+            <div style="margin-top: 20px; display: flex; gap: 10px;">
+                <button class="btn primary" id="textConfirm">Создать</button>
+                <button class="btn secondary" onclick="document.getElementById('textModal').classList.remove('show')">Отмена</button>
+            </div>
         </div>
     </div>
-</div>
 
-<div id="overlay"></div>
+    <div id="passwordModal" class="custom-modal">
+        <div class="modal-content">
+            <h3>Очистка всей доски</h3>
+            <label style="display:block; margin-bottom:10px; color:#f7768e">Требуется пароль администратора</label>
+            <input type="password" id="modalPassInput" placeholder="Пароль...">
+            <button class="btn danger" id="passConfirm">Удалить всё</button>
+            <button class="btn secondary" onclick="document.getElementById('passwordModal').classList.remove('show')">Закрыть</button>
+        </div>
+    </div>
 
-<script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
-<script src="app.js"></script>
+    <script src="app.js"></script>
 </body>
 </html>
+

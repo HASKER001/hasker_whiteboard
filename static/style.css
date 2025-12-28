@@ -2,112 +2,218 @@ html, body {
     margin: 0;
     padding: 0;
     overflow: hidden;
-    font-family: sans-serif;
+    font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    background: #0f0f13; /* Глубокий темный фон */
 }
 
 canvas {
-    background: white;
+    background: #ffffff; /* Доска белая */
     display: block;
 }
 
+/* Кнопка настроек ≡ */
 #settingsBtn {
     position: fixed;
     left: 10px;
     top: 50%;
     transform: translateY(-50%);
-    font-size: 28px;
-    background: #222;
-    color: #fff;
-    padding: 12px;
-    border-radius: 50%;
+    font-size: 24px;
+    background: #1e1e26;
+    color: #a9b1d6;
+    padding: 15px;
+    border-radius: 12px;
+    border: 1px solid #323244;
+    cursor: pointer;
     z-index: 100;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+    transition: all 0.2s;
 }
 
+#settingsBtn:active { 
+    scale: 0.9; 
+}
+
+/* Боковая панель AndroidIDE */
 #settingsPanel {
     position: fixed;
-    left: -80%;
+    left: -320px;
     top: 0;
-    width: 70%;
+    width: 280px;
     height: 100%;
-    background: rgba(20,20,20,0.95);
-    backdrop-filter: blur(10px);
-    color: #fff;
-    padding: 20px;
-    transition: left 0.3s ease;
+    background: #16161e;
+    color: #c0caf5;
+    padding: 25px;
+    transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     z-index: 101;
+    border-right: 1px solid #292e42;
+    box-sizing: border-box;
+    overflow-y: auto; /* На случай, если настроек станет много */
 }
 
-#settingsPanel.open {
-    left: 0;
+#settingsPanel.open { 
+    left: 0; 
 }
 
-.section { margin-bottom: 20px; }
-.section label { display: block; margin-bottom: 8px; }
-input[type=range] { width: 100%; }
+#settingsPanel h2 {
+    font-size: 18px;
+    margin-bottom: 30px;
+    color: #7aa2f7;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.section { 
+    margin-bottom: 25px; 
+}
+
+.section label { 
+    display: block; 
+    margin-bottom: 10px; 
+    font-size: 13px; 
+    color: #565f89;
+    text-transform: uppercase;
+}
+
+/* Ползунки */
+input[type=range] {
+    width: 100%;
+    accent-color: #7aa2f7;
+    background: #24283b;
+    height: 4px;
+    border-radius: 2px;
+    cursor: pointer;
+}
+
+/* Поля ввода и выпадающие списки */
+#uploadQuality, #ytInput, #videoUrlInput, #modalTextInput, #modalPassInput {
+    width: 100%;
+    padding: 12px;
+    border-radius: 6px;
+    border: 1px solid #292e42;
+    background: #1a1b26;
+    color: #c0caf5;
+    font-size: 14px;
+    box-sizing: border-box;
+    margin-top: 5px;
+    outline: none;
+}
+
+#uploadQuality:focus, #ytInput:focus {
+    border-color: #7aa2f7;
+}
+
+/* Кнопки */
+button {
+    cursor: pointer;
+    border: none;
+    transition: opacity 0.2s;
+    width: 100%;
+    font-family: inherit;
+}
+
+button:active { 
+    opacity: 0.7; 
+}
+
+.primary { 
+    background: #7aa2f7; 
+    color: #15161e; 
+    padding: 12px; 
+    border-radius: 6px; 
+    font-weight: bold;
+    margin-top: 10px;
+}
 
 .danger {
-    background: #b00020;
-    color: #fff;
-    border: none;
-    padding: 15px;
+    background: #f7768e;
+    color: #15161e;
+    padding: 12px;
     width: 100%;
-    font-size: 16px;
-    border-radius: 8px;
+    font-size: 14px;
+    border-radius: 6px;
+    font-weight: bold;
+    margin-top: 20px;
 }
 
+/* Виджеты YouTube */
+#widget-container { 
+    position: absolute; 
+    inset: 0; 
+    pointer-events: none; 
+    z-index: 5; 
+}
+
+.yt-widget {
+    position: absolute;
+    pointer-events: auto;
+    background: #16161e;
+    border: 1px solid #292e42;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+}
+
+.yt-header { 
+    background: #1a1b26; 
+    height: 24px; 
+    cursor: move; 
+    display: flex; 
+    justify-content: flex-end; 
+    align-items: center; 
+}
+
+.yt-close { 
+    color: #f7768e; 
+    padding: 0 10px; 
+    font-weight: bold; 
+    cursor: pointer; 
+}
+
+/* Модальные окна */
 #overlay {
     position: fixed;
     inset: 0;
-    background: rgba(0,0,0,0.4);
+    background: rgba(0,0,0,0.6);
     display: none;
     z-index: 100;
 }
 
-#overlay.show { display: block; }
+#overlay.show { 
+    display: block; 
+}
 
-/* Стили для новых модалок */
 .custom-modal {
     position: fixed;
     inset: 0;
-    background: rgba(0,0,0,0.85);
+    background: rgba(15, 15, 21, 0.8);
     display: none;
     align-items: center;
     justify-content: center;
     z-index: 200;
 }
 
-.custom-modal.show { display: flex; }
+.custom-modal.show { 
+    display: flex; 
+}
 
 .modal-content {
-    background: #2c2c2c;
-    color: white;
-    padding: 25px;
-    border-radius: 20px;
-    width: 85%;
-    max-width: 350px;
-    text-align: center;
+    background: #16161e;
+    border: 1px solid #292e42;
+    padding: 30px;
+    border-radius: 12px;
+    width: 90%;
+    max-width: 320px;
 }
 
-.modal-content input {
-    width: 100%;
-    padding: 15px;
-    margin: 15px 0;
-    border-radius: 10px;
-    border: 1px solid #444;
-    background: #1a1a1a;
-    color: white;
-    font-size: 18px;
-    box-sizing: border-box;
+.modal-buttons {
+    display: flex;
+    gap: 10px;
+    margin-top: 20px;
 }
 
-.modal-buttons { display: flex; gap: 10px; }
-.modal-buttons button {
-    flex: 1;
-    padding: 15px;
-    border: none;
-    border-radius: 10px;
-    font-weight: bold;
+/* Стили для кнопок внутри модалок */
+#textCancel, #passCancel {
+    background: #24283b;
+    color: #c0caf5;
 }
 
-.primary { background: #007bff; color: white; }
-#textCancel, #passCancel { background: #555; color: white; }
