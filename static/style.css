@@ -1,0 +1,80 @@
+html, body {
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+}
+
+canvas {
+    background: white;
+    display: block;
+}
+
+#settingsBtn {
+  position: fixed;
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 28px;
+  background: #222;
+  color: #fff;
+  padding: 12px;
+  border-radius: 50%;
+  z-index: 100;
+}
+
+#settingsPanel {
+  position: fixed;
+  left: -50%;
+  top: 0;
+  width: 50%;
+  height: 100%;
+  background: rgba(20,20,20,0.95);
+  backdrop-filter: blur(10px);
+  color: #fff;
+  padding: 20px;
+  transition: left 0.3s ease;
+  z-index: 101;
+}
+
+#settingsPanel.open {
+  left: 0;
+}
+
+#settingsPanel h2 {
+  margin-top: 0;
+}
+
+.section {
+  margin-bottom: 20px;
+}
+
+.section label {
+  display: block;
+  margin-bottom: 8px;
+}
+
+input[type=range] {
+  width: 100%;
+}
+
+.danger {
+  background: #b00020;
+  color: #fff;
+  border: none;
+  padding: 15px;
+  width: 100%;
+  font-size: 16px;
+  border-radius: 8px;
+}
+
+#overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.4);
+  display: none;
+  z-index: 100;
+}
+
+#overlay.show {
+  display: block;
+}

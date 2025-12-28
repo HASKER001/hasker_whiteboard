@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Whiteboard</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<canvas id="board"></canvas>
+
+<div id="settingsBtn">⚙️</div>
+
+<div id="settingsPanel">
+  <h2>Настройки</h2>
+
+  <div class="section">
+    <label>✏ Толщина карандаша</label>
+    <input type="range" id="brushSize" min="1" max="30" value="3">
+  </div>
+
+  <div class="section">
+    <label>🅰 Размер текста</label>
+    <input type="range" id="textSize" min="10" max="80" value="24">
+  </div>
+
+  <div class="section">
+    <label>🖼 Размер изображений</label>
+    <input type="range" id="imageScale" min="0.2" max="3" step="0.1" value="1">
+  </div>
+
+  <div class="section">
+    <label>📤 Загрузить изображение</label>
+    <input type="file" id="imageUpload" accept="image/*">
+  </div>
+
+  <hr>
+  <button id="clearAllBtn" class="danger">🧹 Очистить для всех</button>
+</div>
+
+<div id="overlay"></div>
+
+<script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+<script src="app.js"></script>
+
+</body>
+</html>
