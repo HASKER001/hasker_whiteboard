@@ -1,9 +1,10 @@
 <!DOCTYPE html>
-<html>
+<html lang="ru">
 <head>
-<meta charset="UTF-8">
-<title>Whiteboard</title>
-<link rel="stylesheet" href="style.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Whiteboard</title>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
@@ -12,36 +13,53 @@
 <div id="settingsBtn">⚙️</div>
 
 <div id="settingsPanel">
-  <h2>Настройки</h2>
+    <h2>Настройки</h2>
+    <div class="section">
+        <label>✏ Толщина карандаша</label>
+        <input type="range" id="brushSize" min="1" max="30" value="3">
+    </div>
+    <div class="section">
+        <label>🅰 Размер текста</label>
+        <input type="range" id="textSize" min="10" max="80" value="24">
+    </div>
+    <div class="section">
+        <label>🖼 Размер изображений</label>
+        <input type="range" id="imageScale" min="0.2" max="3" step="0.1" value="1">
+    </div>
+    <div class="section">
+        <label>📤 Загрузить изображение</label>
+        <input type="file" id="imageUpload" accept="image/*">
+    </div>
+    <hr>
+    <button id="clearAllBtn" class="danger">🧹 Очистить для всех</button>
+</div>
 
-  <div class="section">
-    <label>✏ Толщина карандаша</label>
-    <input type="range" id="brushSize" min="1" max="30" value="3">
-  </div>
+<div id="textModal" class="custom-modal">
+    <div class="modal-content">
+        <h3>Новый текст</h3>
+        <input type="text" id="modalTextInput" placeholder="Введите что-нибудь...">
+        <div class="modal-buttons">
+            <button id="textCancel">Отмена</button>
+            <button id="textConfirm" class="primary">Добавить</button>
+        </div>
+    </div>
+</div>
 
-  <div class="section">
-    <label>🅰 Размер текста</label>
-    <input type="range" id="textSize" min="10" max="80" value="24">
-  </div>
-
-  <div class="section">
-    <label>🖼 Размер изображений</label>
-    <input type="range" id="imageScale" min="0.2" max="3" step="0.1" value="1">
-  </div>
-
-  <div class="section">
-    <label>📤 Загрузить изображение</label>
-    <input type="file" id="imageUpload" accept="image/*">
-  </div>
-
-  <hr>
-  <button id="clearAllBtn" class="danger">🧹 Очистить для всех</button>
+<div id="passwordModal" class="custom-modal">
+    <div class="modal-content">
+        <h3>Очистка доски</h3>
+        <p>Введите пароль администратора:</p>
+        <input type="password" id="modalPassInput">
+        <div class="modal-buttons">
+            <button id="passCancel">Отмена</button>
+            <button id="passConfirm" class="danger">Удалить всё</button>
+        </div>
+    </div>
 </div>
 
 <div id="overlay"></div>
 
 <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
 <script src="app.js"></script>
-
 </body>
 </html>

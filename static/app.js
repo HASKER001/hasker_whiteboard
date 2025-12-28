@@ -1,6 +1,3 @@
-// ==========================
-// app.js — клиент (рисование, текст, pinch-to-zoom + pan, inertia)
-// ==========================
 const socket = io();
 const canvas = document.getElementById('board');
 const ctx = canvas.getContext('2d');
@@ -14,114 +11,76 @@ let H = window.innerHeight;
 canvas.width = W;
 canvas.height = H;
 
-// трансформация "камеры"
-let scale = 1;          // масштаб
-let tx = 0, ty = 0;     // смещение (в пикселях экрана)
+// Состояние камеры
+let scale = 1;          
+let tx = 0, ty = 0;     
 const MIN_SCALE = 0.2;
 const MAX_SCALE = 5;
 
-// состояние кисти / текста
+// Состояние кисти
 let state = { size: 3, textSize: 24, color: '#000000' };
+let lines = [];   
+let texts = [];   
 
-let lines = [];   // сохранённые линии (world coords)
-let texts = [];   // сохранённые тексты (world coords)
-
-// взаимодействие
+// Флаги взаимодействия
 let drawing = false;
-let lastWorld = null;      // last point in world coords while drawing
+let lastWorld = null;      
 let draggingText = null;
 let pressTimer = null;
+let pendingTextCoords = null; 
 
-// pinch / pan
-let pinch = null; // { startDist, startScale, startTx, startTy, startCenterScreen, lastCenterScreen, lastTime, velocityX, velocityY }
+// Pinch / Pan / Inertia
+let pinch = null; 
 let inertiaFrame = null;
+let panVx = 0, panVy = 0;
 
-// UI panel
+// --- Панель настроек ---
 btn.onclick = () => { panel.classList.add('open'); overlay.classList.add('show'); };
-overlay.onclick = () => { panel.classList.remove('open'); overlay.classList.remove('show'); };
+overlay.onclick = () => { 
+    panel.classList.remove('open'); 
+    overlay.classList.remove('show'); 
+    closeModals();
+};
 
-// Prevent context menu on canvas (for right-click)
-canvas.addEventListener('contextmenu', e => e.preventDefault());
-
-// ------------ coordinate transforms ------------
-function screenToWorld(screenX, screenY) {
-    // world = (screen - translate) / scale
-    return { x: (screenX - tx) / scale, y: (screenY - ty) / scale };
+// --- Трансформация координат ---
+function screenToWorld(sx, sy) {
+    return { x: (sx - tx) / scale, y: (sy - ty) / scale };
 }
-function worldToScreen(worldX, worldY) {
-    return { x: worldX * scale + tx, y: worldY * scale + ty };
-}
-
-// ------------ drawing helpers ------------
-function drawLineOnScreen(ax, ay, bx, by, size, color) {
-    ctx.strokeStyle = color;
-    ctx.lineWidth = size * scale; // optionally scale stroke thickness visually
-    ctx.lineCap = 'round';
-    ctx.beginPath();
-    ctx.moveTo(ax, ay);
-    ctx.lineTo(bx, by);
-    ctx.stroke();
-}
-function drawTextOnScreen(t) {
-    const fontSize = Math.max(6, t.size * scale);
-    ctx.font = `${fontSize}px Arial`;
-    ctx.fillStyle = t.color;
-    const pos = worldToScreen(t.x, t.y);
-    ctx.fillText(t.text, pos.x, pos.y);
+function worldToScreen(wx, wy) {
+    return { x: wx * scale + tx, y: wy * scale + ty };
 }
 
+// --- Отрисовка ---
 function redraw() {
-    ctx.setTransform(1,0,0,1,0,0); // reset
+    ctx.setTransform(1,0,0,1,0,0);
     ctx.clearRect(0, 0, W, H);
-    // We'll draw using world->screen conversions for clarity
-    // Draw lines
+
+    // Рисуем линии
     for (const l of lines) {
         const a = worldToScreen(l.from.x, l.from.y);
         const b = worldToScreen(l.to.x, l.to.y);
-        drawLineOnScreen(a.x, a.y, b.x, b.y, l.size, l.color);
+        ctx.strokeStyle = l.color;
+        ctx.lineWidth = l.size * scale;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(a.x, a.y);
+        ctx.lineTo(b.x, b.y);
+        ctx.stroke();
     }
-    // Draw texts
+    // Рисуем тексты
     for (const t of texts) {
-        drawTextOnScreen(t);
-    }
-}
-
-// ------------ hit tests ------------
-function textHitTest(screenX, screenY) {
-    // returns text object if hit
-    for (let i = texts.length - 1; i >= 0; i--) {
-        const t = texts[i];
-        // measure text width at scaled size
         const fontSize = Math.max(6, t.size * scale);
         ctx.font = `${fontSize}px Arial`;
-        const width = ctx.measureText(t.text).width;
+        ctx.fillStyle = t.color;
         const pos = worldToScreen(t.x, t.y);
-        const height = fontSize * 1.2;
-        const left = pos.x - 12;
-        const right = pos.x + width + 12;
-        const top = pos.y - height / 2;
-        const bottom = pos.y + height / 2;
-        if (screenX >= left && screenX <= right && screenY >= top && screenY <= bottom) return t;
+        ctx.fillText(t.text, pos.x, pos.y);
     }
-    return null;
 }
 
-// ------------ touch utilities ------------
-function dist(p1, p2) {
-    const dx = p1.clientX - p2.clientX;
-    const dy = p1.clientY - p2.clientY;
-    return Math.hypot(dx, dy);
-}
-function midPoint(p1, p2) {
-    return { x: (p1.clientX + p2.clientX)/2, y: (p1.clientY + p2.clientY)/2 };
-}
-
-// ------------ inertia ------------
-let panVx = 0, panVy = 0;
+// --- Инерция ---
 function startInertia() {
     if (inertiaFrame) cancelAnimationFrame(inertiaFrame);
     function step() {
-        // apply velocity
         tx += panVx;
         ty += panVy;
         panVx *= 0.92;
@@ -131,56 +90,62 @@ function startInertia() {
             inertiaFrame = requestAnimationFrame(step);
         } else {
             inertiaFrame = null;
-            panVx = 0; panVy = 0;
         }
     }
     inertiaFrame = requestAnimationFrame(step);
 }
 
-// ------------ touch handlers ------------
+// --- Вспомогательные функции для тача ---
+function dist(p1, p2) { return Math.hypot(p1.clientX - p2.clientX, p1.clientY - p2.clientY); }
+function midPoint(p1, p2) { return { x: (p1.clientX + p2.clientX)/2, y: (p1.clientY + p2.clientY)/2 }; }
+
+function textHitTest(sx, sy) {
+    for (let i = texts.length - 1; i >= 0; i--) {
+        const t = texts[i];
+        const fontSize = Math.max(6, t.size * scale);
+        ctx.font = `${fontSize}px Arial`;
+        const width = ctx.measureText(t.text).width;
+        const pos = worldToScreen(t.x, t.y);
+        if (sx >= pos.x - 10 && sx <= pos.x + width + 10 && sy >= pos.y - fontSize && sy <= pos.y + 10) return t;
+    }
+    return null;
+}
+
+// --- ОБРАБОТЧИКИ ТАЧА ---
 canvas.addEventListener('touchstart', (e) => {
     e.preventDefault();
     if (inertiaFrame) { cancelAnimationFrame(inertiaFrame); inertiaFrame = null; panVx = panVy = 0; }
 
     if (e.touches.length === 2) {
-        // start pinch/pan
         const a = e.touches[0], b = e.touches[1];
-        const d = dist(a,b);
-        const m = midPoint(a,b);
         pinch = {
-            startDist: d,
+            startDist: dist(a, b),
             startScale: scale,
-            startTx: tx,
-            startTy: ty,
-            startCenter: m,
-            lastCenter: m,
+            startTx: tx, startTy: ty,
+            startCenter: midPoint(a, b),
+            lastCenter: midPoint(a, b),
             lastTime: performance.now()
         };
         return;
     }
 
-    // single touch: test if hits text
     const t = e.touches[0];
+    const world = screenToWorld(t.clientX, t.clientY);
+    
     const hit = textHitTest(t.clientX, t.clientY);
     if (hit) {
         draggingText = hit;
-        return;
+    } else {
+        drawing = true;
+        lastWorld = world;
+        pendingTextCoords = world;
+        // Таймер для вызова модалки текста (Long Press)
+        pressTimer = setTimeout(() => {
+            drawing = false;
+            document.getElementById('textModal').classList.add('show');
+            document.getElementById('modalTextInput').focus();
+        }, 600);
     }
-
-    // normal drawing: record starting world point
-    const world = screenToWorld(e.touches[0].clientX, e.touches[0].clientY);
-    drawing = true;
-    lastWorld = world;
-
-    // long press for text addition
-    pressTimer = setTimeout(() => {
-        const text = prompt('Введите текст:');
-        if (!text) return;
-        const tObj = { id: Date.now(), text, x: world.x, y: world.y, size: state.textSize, color: state.color };
-        texts.push(tObj);
-        socket.emit('text_add', tObj);
-        redraw();
-    }, 500);
 });
 
 canvas.addEventListener('touchmove', (e) => {
@@ -188,176 +153,92 @@ canvas.addEventListener('touchmove', (e) => {
     if (pressTimer) { clearTimeout(pressTimer); pressTimer = null; }
 
     if (e.touches.length === 2 && pinch) {
-        const a = e.touches[0], b = e.touches[1];
-        const d = dist(a,b);
-        const m = midPoint(a,b);
-        // compute new scale
-        let newScale = pinch.startScale * (d / pinch.startDist);
-        newScale = Math.max(MIN_SCALE, Math.min(MAX_SCALE, newScale));
-
-        // adjust tx/ty so that the world point under the center remains under the center
-        // world coord under center at start:
-        // p_world = (center - startTx) / startScale
-        const sx = pinch.startCenter.x;
-        const sy = pinch.startCenter.y;
-        const pwx = (sx - pinch.startTx) / pinch.startScale;
-        const pwy = (sy - pinch.startTy) / pinch.startScale;
-        // tx,ty so that pw maps to new center m (we prefer to keep center aligned to current center)
+        const m = midPoint(e.touches[0], e.touches[1]);
+        const d = dist(e.touches[0], e.touches[1]);
+        
+        let newScale = Math.max(MIN_SCALE, Math.min(MAX_SCALE, pinch.startScale * (d / pinch.startDist)));
+        
+        const pwx = (pinch.startCenter.x - pinch.startTx) / pinch.startScale;
+        const pwy = (pinch.startCenter.y - pinch.startTy) / pinch.startScale;
+        
         tx = m.x - pwx * newScale;
         ty = m.y - pwy * newScale;
-
-        // also add additional pan due to movement of center between frames
-        const dtCenterX = m.x - pinch.lastCenter.x;
-        const dtCenterY = m.y - pinch.lastCenter.y;
-        tx += dtCenterX;
-        ty += dtCenterY;
-
-        // velocity for inertia
+        
         const now = performance.now();
         const dt = Math.max(1, now - pinch.lastTime);
-        panVx = dtCenterX / (dt / 16.67); // normalized per 16.67ms
-        panVy = dtCenterY / (dt / 16.67);
+        panVx = (m.x - pinch.lastCenter.x) / (dt / 16);
+        panVy = (m.y - pinch.lastCenter.y) / (dt / 16);
+        
         pinch.lastCenter = m;
         pinch.lastTime = now;
-
         scale = newScale;
         redraw();
         return;
     }
 
-    // single touch move handlers
     const w = screenToWorld(e.touches[0].clientX, e.touches[0].clientY);
     if (draggingText) {
-        draggingText.x = w.x;
-        draggingText.y = w.y;
+        draggingText.x = w.x; draggingText.y = w.y;
         socket.emit('text_move', draggingText);
         redraw();
-        return;
-    }
-
-    if (drawing && lastWorld) {
+    } else if (drawing && lastWorld) {
         const line = { from: {x: lastWorld.x, y: lastWorld.y}, to: {x: w.x, y: w.y}, size: state.size, color: state.color };
         lines.push(line);
         socket.emit('draw', line);
-        // draw incremental
-        const a = worldToScreen(line.from.x, line.from.y);
-        const b = worldToScreen(line.to.x, line.to.y);
-        drawLineOnScreen(a.x, a.y, b.x, b.y, line.size, line.color);
         lastWorld = w;
+        redraw();
     }
 });
 
-canvas.addEventListener('touchend', (e) => {
-    if (pressTimer) { clearTimeout(pressTimer); pressTimer = null; }
-    if (pinch) {
-        // start inertia if velocity exists
-        if (Math.abs(panVx) > 0.2 || Math.abs(panVy) > 0.2) startInertia();
-        pinch = null;
-    }
+canvas.addEventListener('touchend', () => {
+    if (pinch && (Math.abs(panVx) > 0.5 || Math.abs(panVy) > 0.5)) startInertia();
+    clearTimeout(pressTimer);
     drawing = false;
+    pinch = null;
     draggingText = null;
-    lastWorld = null;
 });
 
-// ------------ mouse support (wheel zoom + left-draw, middle-pan) ------------
-let isMouseDown = false;
-let mouseMode = null; // "draw" or "pan" or "dragtext"
-canvas.addEventListener('mousedown', (e) => {
-    if (e.button === 1 || e.button === 2) { // middle or right -> pan
-        mouseMode = 'pan';
-        isMouseDown = true;
-        last = { x: e.clientX, y: e.clientY };
-        if (inertiaFrame) { cancelAnimationFrame(inertiaFrame); inertiaFrame = null; panVx = panVy = 0; }
-        return;
-    }
-    // left button: check text hit
-    const hit = textHitTest(e.clientX, e.clientY);
-    if (hit) {
-        mouseMode = 'dragtext';
-        draggingText = hit;
-        isMouseDown = true;
-        return;
-    }
-    // else draw
-    mouseMode = 'draw';
-    isMouseDown = true;
-    lastWorld = screenToWorld(e.clientX, e.clientY);
-});
-canvas.addEventListener('mousemove', (e) => {
-    if (!isMouseDown) return;
-    if (mouseMode === 'pan') {
-        const dx = e.clientX - last.x;
-        const dy = e.clientY - last.y;
-        tx += dx;
-        ty += dy;
-        panVx = dx; panVy = dy;
-        last = { x: e.clientX, y: e.clientY };
+// --- ЛОГИКА МОДАЛОК ---
+function closeModals() {
+    document.querySelectorAll('.custom-modal').forEach(m => m.classList.remove('show'));
+    document.getElementById('modalTextInput').value = '';
+    document.getElementById('modalPassInput').value = '';
+}
+
+document.getElementById('textConfirm').onclick = () => {
+    const val = document.getElementById('modalTextInput').value;
+    if (val && pendingTextCoords) {
+        const tObj = { id: Date.now(), text: val, x: pendingTextCoords.x, y: pendingTextCoords.y, size: state.textSize, color: state.color };
+        texts.push(tObj);
+        socket.emit('text_add', tObj);
         redraw();
-    } else if (mouseMode === 'dragtext' && draggingText) {
-        const w = screenToWorld(e.clientX, e.clientY);
-        draggingText.x = w.x;
-        draggingText.y = w.y;
-        socket.emit('text_move', draggingText);
-        redraw();
-    } else if (mouseMode === 'draw') {
-        const w = screenToWorld(e.clientX, e.clientY);
-        const line = { from: {x: lastWorld.x, y: lastWorld.y}, to: {x: w.x, y: w.y}, size: state.size, color: state.color };
-        lines.push(line);
-        socket.emit('draw', line);
-        const a = worldToScreen(line.from.x, line.from.y);
-        const b = worldToScreen(line.to.x, line.to.y);
-        drawLineOnScreen(a.x, a.y, b.x, b.y, line.size, line.color);
-        lastWorld = w;
     }
-});
-canvas.addEventListener('mouseup', (e) => {
-    isMouseDown = false;
-    mouseMode = null;
-    draggingText = null;
-    lastWorld = null;
-    // start inertia
-    if (Math.abs(panVx) > 1 || Math.abs(panVy) > 1) startInertia();
-});
-canvas.addEventListener('wheel', (e) => {
-    e.preventDefault();
-    const delta = e.deltaY < 0 ? 1.12 : 0.9;
-    const mx = e.clientX, my = e.clientY;
-    // compute world point under mouse BEFORE scale change:
-    const worldX = (mx - tx) / scale;
-    const worldY = (my - ty) / scale;
-    // apply scale
-    let newScale = Math.max(MIN_SCALE, Math.min(MAX_SCALE, scale * delta));
-    // recompute tx/ty to keep world point under mouse
-    tx = mx - worldX * newScale;
-    ty = my - worldY * newScale;
-    scale = newScale;
-    redraw();
-}, { passive: false });
-
-// ------------ socket events ------------
-socket.on('init', data => {
-    lines = data.lines || [];
-    texts = data.texts || [];
-    redraw();
-});
-socket.on('draw', l => { lines.push(l); redraw(); });
-socket.on('text_add', t => { texts.push(t); redraw(); });
-socket.on('text_move', t => { const i = texts.findIndex(x => x.id === t.id); if (i !== -1) texts[i] = t; redraw(); });
-socket.on('clear', () => { lines = []; texts = []; redraw(); });
-socket.on('clear_denied', d => alert(d.msg));
-
-// ------------ panel controls ------------
-document.getElementById('brushSize').oninput = e => state.size = +e.target.value;
-document.getElementById('textSize').oninput = e => state.textSize = +e.target.value;
-clearBtn.onclick = () => {
-    const pwd = prompt('Введите пароль для очистки:');
-    if (!pwd) return;
-    socket.emit('clear', { password: pwd });
+    closeModals();
 };
 
-// resize handling
-window.addEventListener('resize', () => {
-    W = window.innerWidth; H = window.innerHeight;
-    canvas.width = W; canvas.height = H;
-    redraw();
+clearBtn.onclick = () => document.getElementById('passwordModal').classList.add('show');
+
+document.getElementById('passConfirm').onclick = () => {
+    const pwd = document.getElementById('modalPassInput').value;
+    socket.emit('clear', { password: pwd });
+    closeModals();
+};
+
+document.querySelectorAll('#textCancel, #passCancel').forEach(b => b.onclick = closeModals);
+
+// --- SOCKETS ---
+socket.on('init', d => { lines = d.lines || []; texts = d.texts || []; redraw(); });
+socket.on('draw', l => { lines.push(l); redraw(); });
+socket.on('text_add', t => { texts.push(t); redraw(); });
+socket.on('text_move', t => { 
+    const i = texts.findIndex(x => x.id === t.id); 
+    if(i !== -1) texts[i] = t; 
+    redraw(); 
 });
+socket.on('clear', () => { lines = []; texts = []; redraw(); });
+
+// Настройки из панели
+document.getElementById('brushSize').oninput = e => state.size = +e.target.value;
+document.getElementById('textSize').oninput = e => state.textSize = +e.target.value;
+
+window.onresize = () => { W = window.innerWidth; H = window.innerHeight; canvas.width = W; canvas.height = H; redraw(); };

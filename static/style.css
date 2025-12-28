@@ -2,6 +2,7 @@ html, body {
     margin: 0;
     padding: 0;
     overflow: hidden;
+    font-family: sans-serif;
 }
 
 canvas {
@@ -10,71 +11,103 @@ canvas {
 }
 
 #settingsBtn {
-  position: fixed;
-  left: 10px;
-  top: 50%;
-  transform: translateY(-50%);
-  font-size: 28px;
-  background: #222;
-  color: #fff;
-  padding: 12px;
-  border-radius: 50%;
-  z-index: 100;
+    position: fixed;
+    left: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 28px;
+    background: #222;
+    color: #fff;
+    padding: 12px;
+    border-radius: 50%;
+    z-index: 100;
 }
 
 #settingsPanel {
-  position: fixed;
-  left: -50%;
-  top: 0;
-  width: 50%;
-  height: 100%;
-  background: rgba(20,20,20,0.95);
-  backdrop-filter: blur(10px);
-  color: #fff;
-  padding: 20px;
-  transition: left 0.3s ease;
-  z-index: 101;
+    position: fixed;
+    left: -80%;
+    top: 0;
+    width: 70%;
+    height: 100%;
+    background: rgba(20,20,20,0.95);
+    backdrop-filter: blur(10px);
+    color: #fff;
+    padding: 20px;
+    transition: left 0.3s ease;
+    z-index: 101;
 }
 
 #settingsPanel.open {
-  left: 0;
+    left: 0;
 }
 
-#settingsPanel h2 {
-  margin-top: 0;
-}
-
-.section {
-  margin-bottom: 20px;
-}
-
-.section label {
-  display: block;
-  margin-bottom: 8px;
-}
-
-input[type=range] {
-  width: 100%;
-}
+.section { margin-bottom: 20px; }
+.section label { display: block; margin-bottom: 8px; }
+input[type=range] { width: 100%; }
 
 .danger {
-  background: #b00020;
-  color: #fff;
-  border: none;
-  padding: 15px;
-  width: 100%;
-  font-size: 16px;
-  border-radius: 8px;
+    background: #b00020;
+    color: #fff;
+    border: none;
+    padding: 15px;
+    width: 100%;
+    font-size: 16px;
+    border-radius: 8px;
 }
 
 #overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,0.4);
-  display: none;
-  z-index: 100;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.4);
+    display: none;
+    z-index: 100;
 }
 
-#overlay.show {
-  display: block;
+#overlay.show { display: block; }
+
+/* Стили для новых модалок */
+.custom-modal {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.85);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 200;
 }
+
+.custom-modal.show { display: flex; }
+
+.modal-content {
+    background: #2c2c2c;
+    color: white;
+    padding: 25px;
+    border-radius: 20px;
+    width: 85%;
+    max-width: 350px;
+    text-align: center;
+}
+
+.modal-content input {
+    width: 100%;
+    padding: 15px;
+    margin: 15px 0;
+    border-radius: 10px;
+    border: 1px solid #444;
+    background: #1a1a1a;
+    color: white;
+    font-size: 18px;
+    box-sizing: border-box;
+}
+
+.modal-buttons { display: flex; gap: 10px; }
+.modal-buttons button {
+    flex: 1;
+    padding: 15px;
+    border: none;
+    border-radius: 10px;
+    font-weight: bold;
+}
+
+.primary { background: #007bff; color: white; }
+#textCancel, #passCancel { background: #555; color: white; }
